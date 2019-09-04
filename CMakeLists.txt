@@ -13,6 +13,12 @@ link_libraries(
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -pthread")
 
-set(SOURCE_FILES
+set(HELLO_FILE
         ./src/hello_libuv.c)
-add_executable(HelloUv ${SOURCE_FILES})
+set(IDLE_FILE
+        ./src/idle.c)
+set(FS_FILE
+        ./src/fs.c)
+add_executable(HelloUv ${HELLO_FILE})
+add_executable(IdleHandle ${IDLE_FILE})
+add_executable(FsHandle ${FS_FILE})
