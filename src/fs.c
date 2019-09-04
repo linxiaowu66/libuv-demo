@@ -2,10 +2,52 @@
 #include "uv.h"
 #include "common.h"
 
-static const char *filename = "./test1.txt";
+static const char *filename = "/Users/linxiaowu/Github/libuv-demo/src/test.txt";
+
+void read_cb(uv_fs_t *read_req) {
+  int r = 0;
+  CHECK(read_req->result, "read_cb");
+
+   uv_context_t *context = read_req->data;
+
+  fprintf(stderr, "%s", context->buf.base);
+
+  // 关闭文件
+  uv_fs_t close_req;
+  r = uv_fs_close(uv_default_loop(), &close_req, context->open_req->result, NULL);
+
+  CHECK(r, "uv_fs_close");
+
+  // 操作完成，记得释放所有用到的内存
+  uv_fs_req_cleanup(&close_req);
+  uv_fs_req_cleanup(context->open_req);
+  uv_fs_req_cleanup(read_req);
+
+  free(context);
+}
 
 void open_cb(uv_fs_t* open_req) {
-  printf("open successfully：%d\n", open_req->result);
+  CHECK(open_req->result, "open_cb");
+
+  fprintf(stderr, "opened %s, result: %zd\n", open_req->path, open_req->result);
+
+  uv_fs_t *read_req = malloc(sizeof(uv_fs_t));
+
+  read_req->data = open_req->data;
+  uv_context_t *context = open_req->data;
+
+  int r = 0;
+  // 读取文件
+  /* 这里有个很神奇的地方：offset这个参数决定了我调用系统层的哪个函数，当我传了-1的时候，通过查看代码发现 */
+  /* 有两种组合，即下面的代码：*/
+  // if (req->nbufs == 1)
+  //    result = read(req->file, req->bufs[0].base, req->bufs[0].len);
+  //  else
+  //    result = readv(req->file, (struct iovec*) req->bufs, req->nbufs);
+  // 然后nbufs = 1的时候，调用read函数没问题，但是如果调用下面的readv，那么就会报错：EINVAL(-22): invalid argument
+  // 代码调试跟踪并阅读linux关于这个函数的说明并不能找到问题的原因
+  r = uv_fs_read(uv_default_loop(), read_req, open_req->result, &context->buf, context->buf.len, -1, read_cb);
+  CHECK(r, "open_cb");
 }
 
 int main() {
@@ -29,7 +71,7 @@ int main() {
   int r = 0;
   // 首先先打开文件
   r = uv_fs_open(loop, open_req, filename, O_RDONLY, S_IRUSR, open_cb);
-  if (r < 0) CHECK(r, "uv_fs_open");
+  CHECK(r, "uv_fs_open");
 
   uv_run(loop, UV_RUN_DEFAULT);
 }
