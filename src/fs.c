@@ -23,6 +23,7 @@ void read_cb(uv_fs_t *read_req) {
   uv_fs_req_cleanup(context->open_req);
   uv_fs_req_cleanup(read_req);
 
+  free(context->buf.base);
   free(context);
 }
 
@@ -46,7 +47,7 @@ void open_cb(uv_fs_t* open_req) {
   //    result = readv(req->file, (struct iovec*) req->bufs, req->nbufs);
   // 然后nbufs = 1的时候，调用read函数没问题，但是如果调用下面的readv，那么就会报错：EINVAL(-22): invalid argument
   // 代码调试跟踪并阅读linux关于这个函数的说明并不能找到问题的原因
-  r = uv_fs_read(uv_default_loop(), read_req, open_req->result, &context->buf, context->buf.len, -1, read_cb);
+  r = uv_fs_read(uv_default_loop(), read_req, open_req->result, &context->buf, context->buf.len, 0, read_cb);
   CHECK(r, "open_cb");
 }
 
