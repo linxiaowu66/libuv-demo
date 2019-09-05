@@ -117,6 +117,10 @@ void connection_cb(uv_stream_t *server, int status) {
   r = uv_read_start((uv_stream_t *)tcp_client_handle, alloc_cb, read_cb);
 }
 
+void timer_cb(uv_timer_t *handle) {
+  uv_print_active_handles(handle->loop, stderr);
+}
+
 int main() {
   uv_loop_t *loop = uv_default_loop();
   int r = 0;
@@ -144,6 +148,15 @@ int main() {
   // That's why you should always end your output with a newline.
   // 所以如果你这里的printf打印后不加\n的话，所有的打印都会积攒在一起，直到有\n
   printf("tcp server listen at %s:%d\n", HOST, PORT);
+
+
+  // 增加一个定时器去询问当前是不是一直有活跃的句柄，以此来验证某些观点
+  uv_timer_t timer_handle;
+  r = uv_timer_init(loop, &timer_handle);
+  CHECK(r, "uv_timer_init");
+
+  // 每10秒钟调用定时器回调一次
+  r = uv_timer_start(&timer_handle, timer_cb, 10 * 1000, 10 * 1000);
 
   uv_run(loop, UV_RUN_DEFAULT);
 }
