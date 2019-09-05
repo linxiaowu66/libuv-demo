@@ -54,6 +54,14 @@ void write_cb(uv_write_t* req, int status) {
   free(write_req);
 }
 
+void write_to_client(char *resp, uv_stream_t* stream) {
+  int r = 0;
+  write_req_t * write_req = malloc(sizeof(uv_fs_t));
+  write_req->buf = uv_buf_init(resp, sizeof(resp));
+  r = uv_write(&write_req->req, stream, &write_req->buf, sizeof(resp), write_cb);
+  CHECK(r, "uv_write");
+}
+
 void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
   int r = 0;
   // 读数据包最重要的是判断nread这个字段
@@ -78,23 +86,11 @@ void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 
   // 正常读取数据，判断数据是不是我们想要的，不是的话就返回错误的消息告知客户端
   if (!strcmp("Hello\n", buf->base)) {
-    write_req_t * write_req = malloc(sizeof(uv_fs_t));
-    char resp[] = "world\n";
-    write_req->buf = uv_buf_init(resp, sizeof(resp));
-    r = uv_write(&write_req->req, stream, &write_req->buf, sizeof(resp), write_cb);
-    CHECK(r, "uv_write");
+    write_to_client("world\n", stream);
   } else if (!strcmp("Libuv\n", buf->base)) {
-    write_req_t * write_req = malloc(sizeof(uv_fs_t));
-    char resp[] = "I love\n";
-    write_req->buf = uv_buf_init(resp, sizeof(resp));
-    r = uv_write(&write_req->req, stream, &write_req->buf, sizeof(resp), write_cb);
-    CHECK(r, "uv_write");
+    write_to_client("I love\n", stream);
   } else {
-    write_req_t * write_req = malloc(sizeof(uv_fs_t));
-    char resp[] = "Unknown argot\n";
-    write_req->buf = uv_buf_init(resp, sizeof(resp));
-    r = uv_write(&write_req->req, stream, &write_req->buf, sizeof(resp), write_cb);
-    CHECK(r, "uv_write");
+    write_to_client("Unknown argot\n", stream);
   }
 }
 
