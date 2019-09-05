@@ -19,6 +19,9 @@ set(IDLE_FILE
         ./src/idle.c)
 set(FS_FILE
         ./src/fs.c)
+set(TCP_FILE
+        ./src/tcpserver.c)
 add_executable(HelloUv ${HELLO_FILE})
 add_executable(IdleHandle ${IDLE_FILE})
 add_executable(FsHandle ${FS_FILE})
+add_executable(TcpHandle ${TCP_FILE})

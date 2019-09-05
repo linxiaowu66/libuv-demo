@@ -1,3 +1,10 @@
+/*
+ * 读写文件的基本步骤(使用异步形式)：
+ * 1、首先初始化open请求：uv_fs_t => malloc分配或者直接定义
+ * 2、使用open请求调用uv_fs_open打开文件，并传入回调
+ * 3、回调中再重复上述动作继续分别调用uv_fs_read、uv_fs_close、uv_fs_write等方法
+ * 4、所有操作结束之后，记得释放所有的文件请求：uv_fs_req_cleanup，并释放分配过的所有内存：free
+ */
 #include <stdio.h>
 #include "uv.h"
 #include "common.h"
@@ -38,15 +45,16 @@ void open_cb(uv_fs_t* open_req) {
   uv_context_t *context = open_req->data;
 
   int r = 0;
-  // 读取文件
-  /* 这里有个很神奇的地方：offset这个参数决定了我调用系统层的哪个函数，当我传了-1的时候，通过查看代码发现 */
-  /* 有两种组合，即下面的代码：*/
-  // if (req->nbufs == 1)
-  //    result = read(req->file, req->bufs[0].base, req->bufs[0].len);
-  //  else
-  //    result = readv(req->file, (struct iovec*) req->bufs, req->nbufs);
-  // 然后nbufs = 1的时候，调用read函数没问题，但是如果调用下面的readv，那么就会报错：EINVAL(-22): invalid argument
-  // 代码调试跟踪并阅读linux关于这个函数的说明并不能找到问题的原因
+  /* 读取文件
+   * 这里有个很神奇的地方：offset这个参数决定了我调用系统层的哪个函数，当我传了-1的时候，通过查看代码发现
+   * 有两种组合，即下面的代码:
+   * if (req->nbufs == 1)
+   *    result = read(req->file, req->bufs[0].base, req->bufs[0].len);
+   *  else
+   *    result = readv(req->file, (struct iovec*) req->bufs, req->nbufs);
+   * 然后nbufs = 1的时候，调用read函数没问题，但是如果调用下面的readv，那么就会报错：EINVAL(-22): invalid argument
+   * 代码调试跟踪并阅读linux关于这个函数的说明并不能找到问题的原因
+   */
   r = uv_fs_read(uv_default_loop(), read_req, open_req->result, &context->buf, context->buf.len, 0, read_cb);
   CHECK(r, "open_cb");
 }

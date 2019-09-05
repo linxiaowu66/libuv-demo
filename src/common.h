@@ -12,3 +12,8 @@ typedef struct context_struct {
   uv_fs_t *open_req;
   uv_buf_t buf;
 }uv_context_t;
+
+typedef struct {
+  uv_write_t req;
+  uv_buf_t buf;
+} write_req_t;
