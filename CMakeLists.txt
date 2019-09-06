@@ -21,7 +21,10 @@ set(FS_FILE
         ./src/fs.c)
 set(TCP_FILE
         ./src/tcpserver.c)
+set(UDP_FILE
+        ./src/udpserver.c)
 add_executable(HelloUv ${HELLO_FILE})
 add_executable(IdleHandle ${IDLE_FILE})
 add_executable(FsHandle ${FS_FILE})
 add_executable(TcpHandle ${TCP_FILE})
+add_executable(UdpHandle ${UDP_FILE})
