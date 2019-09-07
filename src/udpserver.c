@@ -52,15 +52,16 @@ void receive_cb(uv_udp_t *req, ssize_t nread, const uv_buf_t *buf, const struct 
   fprintf(stderr, "recv from %s\n", sender);
 
 
-  uv_udp_t send_socket_handle;
+//  uv_udp_t send_socket_handle;
   uv_udp_send_t *send_req = malloc(sizeof(send_req));
   // 反向发送消息给客户端
-  r = uv_udp_init(req->loop, &send_socket_handle);
-  CHECK(r, "uv_udp_init");
-  r = uv_udp_bind(&send_socket_handle, addr, 0);
-  CHECK(r, "uv_udp_bind");
-  r = uv_udp_send(send_req, &send_socket_handle, buf, 1, addr, send_cb);
+  // r = uv_udp_init(req->loop, &send_socket_handle);
+  // CHECK(r, "uv_udp_init");
+  // r = uv_udp_bind(&send_socket_handle, addr, 0);
+  // CHECK(r, "uv_udp_bind");
+  // r = uv_udp_send(send_req, &req->, buf, 1, addr, send_cb);
   CHECK(r, "uv_udp_send");
+  // r = uv_udp_recv_stop(handle)
 }
 
 void timer_cb(uv_timer_t *handle) {
