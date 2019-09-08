@@ -29,20 +29,20 @@ void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 }
 
 void send_cb(uv_udp_send_t* req, int status) {
-  CHECK(status, "send_cb");
-
-  free(req);
+//  CHECK(status, "send_cb");
+  printf("callback.......");
+//  free(req);
 }
 
 
 
-void receive_cb(uv_udp_t *req, ssize_t nread, const uv_buf_t *buf, const struct sockaddr *addr, unsigned int flags) {
+void receive_cb(uv_udp_t *handle, ssize_t nread, const uv_buf_t *buf, const struct sockaddr *addr, unsigned int flags) {
   int r = 0;
   // 读数据包最重要的是判断nread这个字段
   if (nread < 0) {
     // 因为udp不是使用stream形式，所以这里不需要使用uv_shutdown，直接调用uv_close
     fprintf(stderr, "recv error unexpected\n");
-    uv_close((uv_handle_t *)req, NULL);
+    uv_close((uv_handle_t *)handle, NULL);
     free(buf->base);
     return;
   }
@@ -52,14 +52,18 @@ void receive_cb(uv_udp_t *req, ssize_t nread, const uv_buf_t *buf, const struct 
   fprintf(stderr, "recv from %s\n", sender);
 
 
-//  uv_udp_t send_socket_handle;
+  uv_udp_t send_socket_handle;
   uv_udp_send_t *send_req = malloc(sizeof(send_req));
+  uv_buf_t newBuf = uv_buf_init(buf->base, nread);
+  struct sockaddr_in client_addr;
+  r = uv_ip4_addr(sender, 60581, &client_addr);
   // 反向发送消息给客户端
-  // r = uv_udp_init(req->loop, &send_socket_handle);
-  // CHECK(r, "uv_udp_init");
-  // r = uv_udp_bind(&send_socket_handle, addr, 0);
-  // CHECK(r, "uv_udp_bind");
-  // r = uv_udp_send(send_req, &req->, buf, 1, addr, send_cb);
+//   r = uv_udp_init(req->loop, &send_socket_handle);
+//   CHECK(r, "uv_udp_init");
+//   r = uv_udp_bind(&client_addr, addr, 0);
+//   CHECK(r, "uv_udp_bind");
+
+   r = uv_udp_send(send_req, &send_socket_handle, &newBuf, nread, addr, send_cb);
   CHECK(r, "uv_udp_send");
   // r = uv_udp_recv_stop(handle)
 }
