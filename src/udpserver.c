@@ -7,6 +7,7 @@
  *    4.1、uv_udp_init初始化send_socket_handle
  *    4.2、uv_udp_bind绑定发送者的地址，地址可以从recv获取
  *    4.3、uv_udp_send发送指定消息
+ *  除了上述知识点外，本demo还是用到signal句柄。
  */
 
 #include <stdio.h>

@@ -25,9 +25,12 @@ set(UDP_FILE
         ./src/udpserver.c)
 set(PROCESS_FILE
         ./src/process.c)
+set(THREAD_FILE
+        ./src/thread.c)
 add_executable(HelloUv ${HELLO_FILE})
 add_executable(IdleHandle ${IDLE_FILE})
 add_executable(FsHandle ${FS_FILE})
 add_executable(TcpHandle ${TCP_FILE})
 add_executable(UdpHandle ${UDP_FILE})
 add_executable(ProcessHandle ${PROCESS_FILE})
+add_executable(ThreadHandle ${THREAD_FILE})
