@@ -17,3 +17,8 @@ typedef struct {
   uv_write_t req;
   uv_buf_t buf;
 } write_req_t;
+
+typedef struct {
+  char string[10];
+  int number;
+} thread_args_t;

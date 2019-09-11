@@ -34,6 +34,15 @@ void timer_cb(uv_timer_t *handle) {
   uv_print_active_handles(handle->loop, stderr);
 }
 
+// 我们使用读写锁来演示线程间读写公共内存的一种保护机制
+void thread_entry(void *args) {
+  printf("I am the custom thread, threadId => 0x%lx\n", (unsigned long int)uv_thread_self());
+
+  thread_args_t threadArgs = *(thread_args_t *)args;
+
+  printf("master process pass the args: %s => %d\n", threadArgs.string, threadArgs.number);
+}
+
 int main() {
   uv_loop_t *loop = uv_default_loop();
   int r = 0;
@@ -52,6 +61,27 @@ int main() {
 
   r = uv_async_send(&async_handle);
   CHECK(r, "uv_async_send");
+
+
+  // 第三种是自己手动创建线程：uv_thread_create
+  uv_thread_t thread_handle[3];
+  thread_args_t thread_args[3] = {{
+    .string = "I am reader thread one",
+    .number = 0,
+  }, {
+    .string = "I am reader thread two",
+    .number = 1,
+  }, {
+    .string = "I am writer thread one",
+    .number = 3,
+  }};
+  r = uv_thread_create(&thread_handle, thread_entry, &thread_args);
+  CHECK(r, "uv_thread_create");
+  r = uv_thread_join(&thread_handle);
+  CHECK(r, "uv_thread_join");
+
+
+  printf("i am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
 
   // 增加一个定时器去询问当前是不是一直有活跃的句柄，以此来验证某些观点
   uv_timer_t timer_handle;
