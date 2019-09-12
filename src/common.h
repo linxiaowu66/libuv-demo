@@ -19,6 +19,6 @@ typedef struct {
 } write_req_t;
 
 typedef struct {
-  char string[10];
+  char string[30];
   int number;
 } thread_args_t;

@@ -12,6 +12,10 @@
 #include "uv.h"
 #include "common.h"
 
+int shareMemory = 0;
+uv_rwlock_t numlock;
+uv_barrier_t barrier;
+
 // work_cb是会从线程池中调度一个线程去执行
 void work_cb(uv_work_t *req) {
   printf("I am work callback, calling in some thread in thread pool, pid=>%d\n", uv_os_getpid());
@@ -35,17 +39,55 @@ void timer_cb(uv_timer_t *handle) {
 }
 
 // 我们使用读写锁来演示线程间读写公共内存的一种保护机制
-void thread_entry(void *args) {
-  printf("I am the custom thread, threadId => 0x%lx\n", (unsigned long int)uv_thread_self());
+void reader(void *args) {
+  unsigned long int threadId = (unsigned long int)uv_thread_self();
+  printf("I am the reader thread, threadId => 0x%lx\n", threadId);
 
   thread_args_t threadArgs = *(thread_args_t *)args;
 
-  printf("master process pass the args: %s => %d\n", threadArgs.string, threadArgs.number);
+  printf("[0x%lx-reader/%d]master process pass the args: %s\n", threadId, threadArgs.number, threadArgs.string);
+
+  int i = 0;
+
+  for(;i < 5; i++) {
+    uv_rwlock_rdlock(&numlock);
+    printf("[0x%lx-reader/%d] read the share memory: %d\n", threadId, threadArgs.number, shareMemory);
+    uv_rwlock_rdunlock(&numlock);
+    printf("[0x%lx-reader/%d] release the rwlock\n", threadId, threadArgs.number);
+  }
+
+  // 等待该线程结束
+  uv_barrier_wait(&barrier);
+}
+
+void writer(void *args) {
+  unsigned long int threadId = (unsigned long int)uv_thread_self();
+  printf("I am the writer thread, threadId => 0x%lx\n", threadId);
+
+  thread_args_t threadArgs = *(thread_args_t *)args;
+
+  printf("[0x%lx-writer/%d]master process pass the args: %s\n", threadId, threadArgs.number, threadArgs.string);
+
+  int i = 0;
+
+  for(;i < 5; i++) {
+    uv_rwlock_wrlock(&numlock);
+    printf("[0x%lx-writer/%d] write the share memory: %d\n", threadId, threadArgs.number, shareMemory);
+    shareMemory++;
+    uv_rwlock_wrunlock(&numlock);
+    printf("[0x%lx-writer/%d] release the rwlock\n", threadId, threadArgs.number);
+  }
+
+  // 等待该线程结束
+  uv_barrier_wait(&barrier);
 }
 
 int main() {
   uv_loop_t *loop = uv_default_loop();
   int r = 0;
+  uv_rwlock_init(&numlock);
+  // 这里是4个线程，包含读线程2个、写线程1个、以及event loop线程
+  uv_barrier_init(&barrier, 4);
 
   printf("I am the master process, processId => %d\n", uv_os_getpid());
 
@@ -73,13 +115,22 @@ int main() {
     .number = 1,
   }, {
     .string = "I am writer thread one",
-    .number = 3,
+    .number = 0,
   }};
-  r = uv_thread_create(&thread_handle, thread_entry, &thread_args);
+  r = uv_thread_create(&thread_handle[0], reader, &thread_args[0]);
   CHECK(r, "uv_thread_create");
-  r = uv_thread_join(&thread_handle);
-  CHECK(r, "uv_thread_join");
+  r = uv_thread_create(&thread_handle[1], reader, &thread_args[1]);
+  CHECK(r, "uv_thread_create");
+  r = uv_thread_create(&thread_handle[2], writer, &thread_args[2]);
+  CHECK(r, "uv_thread_create");
+  // 该函数是让event loop等待我创建的线程执行完再退出
+  // r = uv_thread_join(&thread_handle);
+  // CHECK(r, "uv_thread_join");
+  // 但是因为现在我使用了async handle，event loop这个线程不会退出去，所以不再需要使用
+  // 除了使用thread_join之外，还可以使用uv_barrier_wait来实现这个过程
 
+  uv_barrier_wait(&barrier);
+  uv_barrier_destroy(&barrier);
 
   printf("i am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
 
@@ -90,6 +141,9 @@ int main() {
 
   // 10秒钟后调用定时器回调一次
   r = uv_timer_start(&timer_handle, timer_cb, 10 * 1000, 0);
+
+  // 这里destroy读写锁的话，如果不等上面的线程全部执行完，进程会报错，process exist with code 6。
+  uv_rwlock_destroy(&numlock);
 
   return uv_run(loop, UV_RUN_DEFAULT);
 }
