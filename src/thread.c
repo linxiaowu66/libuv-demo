@@ -15,23 +15,39 @@
 int shareMemory = 0;
 uv_rwlock_t numlock;
 uv_barrier_t barrier;
+uv_async_t async_handle;
 
 // work_cb是会从线程池中调度一个线程去执行
 void work_cb(uv_work_t *req) {
   printf("I am work callback, calling in some thread in thread pool, pid=>%d\n", uv_os_getpid());
 //  uv_thread_t thread_handle = uv_thread_self();
   printf("work_cb thread id 0x%lx\n", (unsigned long int) uv_thread_self());
+
+  // 发送消息给eventloop线程
+  int r = 0;
+  char msg[50];
+  sprintf(msg, "I am from another thread: 0x%lx", (unsigned long int) uv_thread_self());
+  async_handle.data = (void *) &msg;
+  r = uv_async_send(&async_handle);
+  CHECK(r, "uv_async_send");
 }
 
 // after_work_cb是在event loop线程中执行
 void after_work_cb(uv_work_t *req, int status) {
   printf("I am after work callback, calling from event loop thread, pid=>%d\n", uv_os_getpid());
   printf("after_work_cb thread id 0x%lx\n", (unsigned long int) uv_thread_self());
+
+  // 关闭掉async句柄
+  uv_close((uv_handle_t *)&async_handle, NULL);
 }
 
 void async_cb(uv_async_t *handle) {
   printf("I am async callback, calling from event loop thread, pid=>%d\n", uv_os_getpid());
   printf("async_cb thread id 0x%lx\n", (unsigned long int) uv_thread_self());
+
+  char *msg = (char *)handle->data;
+
+  printf("I am receiving msg: %s", msg);
 }
 
 void timer_cb(uv_timer_t *handle) {
@@ -49,13 +65,14 @@ void reader(void *args) {
 
   int i = 0;
 
-  for(;i < 5; i++) {
+  for(;i < 2; i++) {
     uv_rwlock_rdlock(&numlock);
     printf("[0x%lx-reader/%d] read the share memory: %d\n", threadId, threadArgs.number, shareMemory);
     uv_rwlock_rdunlock(&numlock);
     printf("[0x%lx-reader/%d] release the rwlock\n", threadId, threadArgs.number);
   }
 
+  printf("[0x%lx-reader/%d]will be exist\n", threadId, threadArgs.number);
   // 等待该线程结束
   uv_barrier_wait(&barrier);
 }
@@ -70,7 +87,7 @@ void writer(void *args) {
 
   int i = 0;
 
-  for(;i < 5; i++) {
+  for(;i < 2; i++) {
     uv_rwlock_wrlock(&numlock);
     printf("[0x%lx-writer/%d] write the share memory: %d\n", threadId, threadArgs.number, shareMemory);
     shareMemory++;
@@ -78,6 +95,7 @@ void writer(void *args) {
     printf("[0x%lx-writer/%d] release the rwlock\n", threadId, threadArgs.number);
   }
 
+  printf("[0x%lx-writer/%d]will be exist\n", threadId, threadArgs.number);
   // 等待该线程结束
   uv_barrier_wait(&barrier);
 }
@@ -97,12 +115,8 @@ int main() {
   CHECK(r, "uv_queue_work");
 
   // 接着测试async_handle的用法,初始化这个方法之后，进程不会主动退出，只有close掉才会
-  uv_async_t async_handle;
   r = uv_async_init(loop, &async_handle, async_cb);
   CHECK(r, "uv_async_init");
-
-  r = uv_async_send(&async_handle);
-  CHECK(r, "uv_async_send");
 
 
   // 第三种是自己手动创建线程：uv_thread_create
@@ -130,9 +144,12 @@ int main() {
   // 除了使用thread_join之外，还可以使用uv_barrier_wait来实现这个过程
 
   uv_barrier_wait(&barrier);
+  printf("i am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
+
+  // 为什么我这里的uv_barrier_wait失败了呢？
   uv_barrier_destroy(&barrier);
 
-  printf("i am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
+
 
   // 增加一个定时器去询问当前是不是一直有活跃的句柄，以此来验证某些观点
   uv_timer_t timer_handle;
