@@ -115,6 +115,7 @@ void connection_cb(uv_stream_t *server, int status) {
   }
 
   // 连接接受成功之后，开始读取客户端传输的数据
+  // 这里将uv_tcp_t换成uv_pipe_t也是没问题的，那样的话就是使用uv_pipe_init来初始化了
   r = uv_read_start((uv_stream_t *)tcp_client_handle, alloc_cb, read_cb);
 }
 

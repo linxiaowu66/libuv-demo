@@ -1,6 +1,6 @@
 /*
  * 利用libuv创建进程都是用的这个方法：uv_spawn，libuv通过起另外一个进程去执行对应的文件
- * 这里仍没明白的是，子进程打印的信息全都没有在父进程的stdio中打印出来。
+ * 这里仍没明白的是，子进程打印的信息全都没有在父进程的stdio中打印出来(printf不行，fprintf(stderr)好像可以)。
  * https://stackoverflow.com/questions/14751504/capture-a-child-processs-stdout-with-libuv
  */
 #include <stdio.h>
