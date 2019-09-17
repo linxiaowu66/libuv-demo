@@ -17,7 +17,7 @@ void read_cb(uv_fs_t *read_req) {
 
    uv_context_t *context = read_req->data;
 
-  fprintf(stderr, "%s", context->buf.base);
+  fprintf(stderr, "[%d] => %s", uv_os_getpid(), context->buf.base);
 
   // 关闭文件
   uv_fs_t close_req;
@@ -30,6 +30,8 @@ void read_cb(uv_fs_t *read_req) {
   uv_fs_req_cleanup(context->open_req);
   uv_fs_req_cleanup(read_req);
 
+  printf("[%d] => close all requests and handles successfully!\n", uv_os_getpid());
+
   free(context->buf.base);
   free(context);
 }
@@ -37,7 +39,7 @@ void read_cb(uv_fs_t *read_req) {
 void open_cb(uv_fs_t* open_req) {
   CHECK(open_req->result, "open_cb");
 
-  fprintf(stderr, "opened %s, result: %zd\n", open_req->path, open_req->result);
+  fprintf(stderr, "[%d] => opened %s, result: %zd\n", uv_os_getpid(), open_req->path, open_req->result);
 
   uv_fs_t *read_req = malloc(sizeof(uv_fs_t));
 
