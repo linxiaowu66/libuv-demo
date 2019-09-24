@@ -23,3 +23,26 @@ Base on libuv version v1.31.1
 
   - ✅ 怎么启动libuv的事件循环
   - ✅ uv_loop_t — Event loop
+  - ✅ Timer handle
+  - ✅ Idle handle
+  - ✅ Async handle
+  - ✅ Signal handle
+  - ✅ Process handle
+  - ✅ Stream handle
+  - ✅ TCP handle
+  - ✅ Pipe handle
+  - ✅ UDP handle
+  - ✅ File system operations
+  - ✅ Thread pool work scheduling
+  - ✅ DNS utility functions
+  - ✅ Threading and synchronization utilities
+  - ☑️ Prepare handle
+  - ☑️ Check handle
+  - ☑️ Poll handle
+  - ☑️ TTY handle
+  - ☑️ FS Event handle
+  - ☑️ FS Poll handle
+  - ☑️ Shared library handling
+  - ☑️
+  - ☑️
+  - ☑️
