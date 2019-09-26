@@ -121,6 +121,8 @@ void connection_cb(uv_stream_t *server, int status) {
 
 void timer_cb(uv_timer_t *handle) {
   uv_print_active_handles(handle->loop, stderr);
+  printf("loop is alive[%d], timer handle is active[%d], now[%lld], hrtime[%lld]\n",
+      uv_loop_alive(handle->loop), uv_is_active((uv_handle_t *)handle), uv_now(handle->loop), uv_hrtime());
 }
 
 int main() {
