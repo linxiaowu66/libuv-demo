@@ -16,6 +16,7 @@ int shareMemory = 0;
 uv_rwlock_t numlock;
 uv_barrier_t barrier;
 uv_async_t async_handle;
+char msg[50];
 
 // work_cb是会从线程池中调度一个线程去执行
 void work_cb(uv_work_t *req) {
@@ -25,8 +26,7 @@ void work_cb(uv_work_t *req) {
 
   // 发送消息给eventloop线程
   int r = 0;
-  char msg[50];
-  sprintf(msg, "I am from another thread: 0x%lx", (unsigned long int) uv_thread_self());
+  sprintf(msg, "This msg from another thread: 0x%lx", (unsigned long int) uv_thread_self());
   async_handle.data = (void *) &msg;
   r = uv_async_send(&async_handle);
   CHECK(r, "uv_async_send");
@@ -36,9 +36,6 @@ void work_cb(uv_work_t *req) {
 void after_work_cb(uv_work_t *req, int status) {
   printf("I am after work callback, calling from event loop thread, pid=>%d\n", uv_os_getpid());
   printf("after_work_cb thread id 0x%lx\n", (unsigned long int) uv_thread_self());
-
-  // 关闭掉async句柄
-  uv_close((uv_handle_t *)&async_handle, NULL);
 }
 
 void async_cb(uv_async_t *handle) {
@@ -47,7 +44,10 @@ void async_cb(uv_async_t *handle) {
 
   char *msg = (char *)handle->data;
 
-  printf("I am receiving msg: %s", msg);
+  printf("I am receiving msg: %s\n", msg);
+
+  // 关闭掉async句柄
+  uv_close((uv_handle_t *)&async_handle, NULL);
 }
 
 void timer_cb(uv_timer_t *handle) {
@@ -144,9 +144,9 @@ int main() {
   // 除了使用thread_join之外，还可以使用uv_barrier_wait来实现这个过程
 
   uv_barrier_wait(&barrier);
-  printf("i am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
+  printf("I am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
 
-  // 为什么我这里的uv_barrier_wait失败了呢？
+ // 为什么我这里的uv_barrier_wait失败了呢？
   uv_barrier_destroy(&barrier);
 
 
