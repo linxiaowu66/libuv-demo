@@ -46,8 +46,8 @@ void async_cb(uv_async_t *handle) {
 
   printf("I am receiving msg: %s\n", msg);
 
-  // 关闭掉async句柄
-  uv_close((uv_handle_t *)&async_handle, NULL);
+  // 关闭掉async句柄，让进程退出
+//  uv_close((uv_handle_t *)&async_handle, NULL);
 }
 
 void timer_cb(uv_timer_t *handle) {
