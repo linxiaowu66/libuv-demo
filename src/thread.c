@@ -9,6 +9,7 @@
  * 3、线程间读写数据同步原语
  */
 #include <stdio.h>
+#include <unistd.h>
 #include "uv.h"
 #include "common.h"
 
@@ -23,6 +24,8 @@ void work_cb(uv_work_t *req) {
   printf("I am work callback, calling in some thread in thread pool, pid=>%d\n", uv_os_getpid());
 //  uv_thread_t thread_handle = uv_thread_self();
   printf("work_cb thread id 0x%lx\n", (unsigned long int) uv_thread_self());
+
+//  sleep(20);
 
   // 发送消息给eventloop线程
   int r = 0;
@@ -72,7 +75,8 @@ void reader(void *args) {
     printf("[0x%lx-reader/%d] release the rwlock\n", threadId, threadArgs.number);
   }
 
-  printf("[0x%lx-reader/%d]will be exist\n", threadId, threadArgs.number);
+  printf("[0x%lx-reader/%d] is existing\n", threadId, threadArgs.number);
+  sleep(8);
   // 等待该线程结束
   uv_barrier_wait(&barrier);
 }
@@ -95,7 +99,8 @@ void writer(void *args) {
     printf("[0x%lx-writer/%d] release the rwlock\n", threadId, threadArgs.number);
   }
 
-  printf("[0x%lx-writer/%d]will be exist\n", threadId, threadArgs.number);
+  sleep(8);
+  printf("[0x%lx-writer/%d] is existing\n", threadId, threadArgs.number);
   // 等待该线程结束
   uv_barrier_wait(&barrier);
 }
@@ -105,13 +110,25 @@ int main() {
   int r = 0;
   uv_rwlock_init(&numlock);
   // 这里是4个线程，包含读线程2个、写线程1个、以及event loop线程
-  uv_barrier_init(&barrier, 4);
+  uv_barrier_init(&barrier, 5);
 
   printf("I am the master process, processId => %d\n", uv_os_getpid());
 
   // 首先示例uv_queue_wok的用法
   uv_work_t work_handle;
+//  uv_work_t work_handle1;
+//  uv_work_t work_handle2;
+//  uv_work_t work_handle3;
+//  uv_work_t work_handle4;
+
+  // 演示当需要线程的事件个数超过线程池的大小的时候，也就是当前没有空闲线程处理最后一个uv_queue_work，最后的一个请求将被挂起
+  // 直到有空闲的线程
   r = uv_queue_work(loop, &work_handle, work_cb, after_work_cb);
+//  r = uv_queue_work(loop, &work_handle1, work_cb, after_work_cb);
+//  r = uv_queue_work(loop, &work_handle2, work_cb, after_work_cb);
+//  r = uv_queue_work(loop, &work_handle3, work_cb, after_work_cb);
+//  r = uv_queue_work(loop, &work_handle4, work_cb, after_work_cb);
+
   CHECK(r, "uv_queue_work");
 
   // 接着测试async_handle的用法,初始化这个方法之后，进程不会主动退出，只有close掉才会
@@ -120,47 +137,52 @@ int main() {
 
 
   // 第三种是自己手动创建线程：uv_thread_create
-  uv_thread_t thread_handle[3];
-  thread_args_t thread_args[3] = {{
-    .string = "I am reader thread one",
-    .number = 0,
-  }, {
-    .string = "I am reader thread two",
-    .number = 1,
-  }, {
-    .string = "I am writer thread one",
-    .number = 0,
-  }};
-  r = uv_thread_create(&thread_handle[0], reader, &thread_args[0]);
-  CHECK(r, "uv_thread_create");
-  r = uv_thread_create(&thread_handle[1], reader, &thread_args[1]);
-  CHECK(r, "uv_thread_create");
-  r = uv_thread_create(&thread_handle[2], writer, &thread_args[2]);
-  CHECK(r, "uv_thread_create");
-  // 该函数是让event loop等待我创建的线程执行完再退出
-  // r = uv_thread_join(&thread_handle);
-  // CHECK(r, "uv_thread_join");
-  // 但是因为现在我使用了async handle，event loop这个线程不会退出去，所以不再需要使用
-  // 除了使用thread_join之外，还可以使用uv_barrier_wait来实现这个过程
-
-  uv_barrier_wait(&barrier);
-  printf("I am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
-
- // 为什么我这里的uv_barrier_wait失败了呢？
-  uv_barrier_destroy(&barrier);
+//  uv_thread_t thread_handle[4];
+//  thread_args_t thread_args[4] = {{
+//    .string = "I am reader thread one",
+//    .number = 0,
+//  }, {
+//    .string = "I am reader thread two",
+//    .number = 1,
+//  }, {
+//    .string = "I am writer thread one",
+//    .number = 0,
+//  }, {
+//    .string = "I am writer thread two",
+//    .number = 1,
+//  }};
+//  r = uv_thread_create(&thread_handle[0], reader, &thread_args[0]);
+//  CHECK(r, "uv_thread_create");
+//  r = uv_thread_create(&thread_handle[1], reader, &thread_args[1]);
+//  CHECK(r, "uv_thread_create");
+//  r = uv_thread_create(&thread_handle[2], writer, &thread_args[2]);
+//  CHECK(r, "uv_thread_create");
+//  r = uv_thread_create(&thread_handle[3], writer, &thread_args[3]);
+//  CHECK(r, "uv_thread_create");
+//  // 该函数是让event loop等待我创建的线程执行完再退出
+//  // r = uv_thread_join(&thread_handle);
+//  // CHECK(r, "uv_thread_join");
+//  // 但是因为现在我使用了async handle，event loop这个线程不会退出去，所以不再需要使用
+//  // 除了使用thread_join之外，还可以使用uv_barrier_wait来实现这个过程
+//
+//  uv_barrier_wait(&barrier);
+//  printf("I am event loop thread => 0x%lx\n", (unsigned long int)uv_thread_self());
+//
+// // 为什么我这里的uv_barrier_wait失败了呢？
+//  uv_barrier_destroy(&barrier);
 
 
 
   // 增加一个定时器去询问当前是不是一直有活跃的句柄，以此来验证某些观点
-  uv_timer_t timer_handle;
-  r = uv_timer_init(loop, &timer_handle);
-  CHECK(r, "uv_timer_init");
-
-  // 10秒钟后调用定时器回调一次
-  r = uv_timer_start(&timer_handle, timer_cb, 10 * 1000, 0);
-
-  // 这里destroy读写锁的话，如果不等上面的线程全部执行完，进程会报错，process exist with code 6。
-  uv_rwlock_destroy(&numlock);
+//  uv_timer_t timer_handle;
+////  r = uv_timer_init(loop, &timer_handle);
+////  CHECK(r, "uv_timer_init");
+////
+////  // 10秒钟后调用定时器回调一次
+////  r = uv_timer_start(&timer_handle, timer_cb, 10 * 1000, 0);
+////
+////  // 这里destroy读写锁的话，如果不等上面的线程全部执行完，进程会报错，process exist with code 6。
+////  uv_rwlock_destroy(&numlock);
 
   return uv_run(loop, UV_RUN_DEFAULT);
 }
